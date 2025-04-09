@@ -100,3 +100,10 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Turinhub
+.idea/
+.memory/
+.clinerules
+.cursorrules
+reverie/backend_server/persona/prompt_template/utils.py

@@ -4,15 +4,19 @@ Author: Joon Sung Park (joonspk@stanford.edu)
 File: gpt_structure.py
 Description: Wrapper functions for calling OpenAI APIs.
 """
-import json
-import random
-import openai
-import time 
-
+import os
 from utils import *
-openai.api_key = openai_api_key
+from openai import OpenAI
 
-def ChatGPT_request(prompt): 
+# Try to get the API key from environment variable first, fall back to the one in utils.py
+openai_api_key = os.environ.get("OPENAI_API_KEY", "") or openai_api_key
+openai_base = os.environ.get("OPENAI_BASE_URL", "") or openai_base_url
+openai_api_model = os.environ.get("OPENAI_MODEL", "") or openai_model
+
+client = OpenAI(api_key=openai_api_key, base_url=openai_base)
+
+
+def llm(prompt, gpt_parameter): 
   """
   Given a prompt and a dictionary of GPT parameters, make a request to OpenAI
   server and returns the response. 
@@ -22,19 +26,28 @@ def ChatGPT_request(prompt):
                    the parameter and the values indicating the parameter 
                    values.   
   RETURNS: 
-    a str of GPT-3's response. 
+    a str of LLM response. 
   """
-  # temp_sleep()
-  try: 
-    completion = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo", 
-    messages=[{"role": "user", "content": prompt}]
-    )
-    return completion["choices"][0]["message"]["content"]
-  
-  except: 
-    print ("ChatGPT ERROR")
-    return "ChatGPT ERROR"
+  try:
+    print(f"GPT Parameter: {gpt_parameter}")
+    # Using the chat completions endpoint instead of completions
+    response = client.chat.completions.create(
+                model=openai_api_model,
+                messages=[
+                  {"role": "user", "content": prompt}
+                ],
+                temperature=0 if gpt_parameter["temperature"] is None else gpt_parameter["temperature"],
+                max_tokens=1000 if gpt_parameter["max_tokens"] is None else gpt_parameter["max_tokens"],
+                top_p=1 if gpt_parameter["top_p"] is None else gpt_parameter["top_p"],
+                frequency_penalty=0 if gpt_parameter["frequency_penalty"] is None else gpt_parameter["frequency_penalty"],
+                presence_penalty=0 if gpt_parameter["presence_penalty"] is None else gpt_parameter["presence_penalty"],
+                stop=None if gpt_parameter["stop"] is None else gpt_parameter["stop"])
+    print(f"LLM Response: {str(response)}")
+    return response.choices[0].message.content
+  except Exception as e: 
+    print(f"Error in GPT_request: {e}")
+    return "TOKEN LIMIT EXCEEDED"
+
 
 prompt = """
 ---
@@ -61,16 +74,11 @@ Example output json:
 {"output": "[["Jane Doe", "Hi!"], ["John Doe", "Hello there!"] ... ]"}
 """
 
-print (ChatGPT_request(prompt))
+gpt_parameter = {"max_tokens": 16000,
+                 "temperature": 0, "top_p": 1, "stream": False,
+                 "frequency_penalty": 0, "presence_penalty": 0,
+                 "stop": None}
 
-
-
-
-
-
-
-
-
-
-
-
+if __name__ == "__main__":
+  response = llm(prompt=prompt, gpt_parameter=gpt_parameter)
+  print(response)
